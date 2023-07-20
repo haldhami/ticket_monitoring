@@ -4,7 +4,9 @@ import re
 import os
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from dotenv import load_dotenv
+from pyvirtualdisplay import Display
 
 load_dotenv()
 
@@ -13,16 +15,28 @@ USER_KEY = os.getenv('PO_USER_KEY')
 
 url = 'https://www.twickets.live/event/1599769182730199040'
 browser = webdriver.Chrome()
-browser.get(url)
+
+def try_initial_connection(url, browser):
+    try:
+        browser.get(url)
+        return
+    except WebDriverException:
+        time.sleep(60)
+        try_initial_connection(url, browser)
+
+try_initial_connection(url, browser)
 
 prev_cheapest_tickets = []
+
+display = Display(visible=0, size=(800, 600))
+display.start()
 
 try:
     while True:
         
         time.sleep(60)
         browser.refresh()
-        time.sleep(2.5)
+        time.sleep(6)
         page = browser.page_source
         
         soup = BeautifulSoup(page, 'html.parser')
@@ -30,7 +44,7 @@ try:
         tickets = soup.find_all('twickets-g2-listing')
 
         cheapest_tickets = []
-        max_price = 90
+        max_price = 65
         
         for ticket in tickets:
             if 'Standing' not in ticket.text:
@@ -45,7 +59,7 @@ try:
             else:
                 break
             
-        if cheapest_tickets == prev_cheapest_tickets:
+        if cheapest_tickets == prev_cheapest_tickets or cheapest_tickets == []:
             continue
             
         message = ''
